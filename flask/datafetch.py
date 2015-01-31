@@ -1,6 +1,5 @@
 import sqlite3
 import time
-import json
 
 from flask import Flask, request, g
 
