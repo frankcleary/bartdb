@@ -1,5 +1,6 @@
 import sqlite3
 import time
+import json
 
 from flask import Flask, request, g
 
@@ -23,20 +24,45 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-@app.route("/dest/<dest>")
-def print_data(dest):
-    c = get_db().cursor()
+def execute_query(query, args=()):
+    cur = get_db().execute(query, args)
+    rows = cur.fetchall()
+    cur.close()
+    return rows
+
+
+@app.route("/viewdb")
+def viewdb():
+    return '<br>'.join(str(row) for row in execute_query("SELECT count(*) FROM etd"))
+
+
+@app.route("/schema")
+def view_schema():
+    return '<br>'.join(str(row) for row in execute_query("pragma table_info('etd')"))
+
+
+@app.route("/")
+def print_data():
+    start_time = time.time()
+    cur = get_db().cursor()
     hour, minute = request.args.get('time', '8:00').split(':')
+    station = request.args.get('station')
+    dest = request.args.get('dest')
     try:
-        hour = int(hour)
-        minute = int(minute)
+        minute_of_day = int(hour) + 60 * int(minute)
     except ValueError:
         return "Time formatted incorrectly"
-    output = []
-    for row in c.execute('select etd, count(*) from etd where dest = ? and hour = ? and minute = ? group by etd',
-                         (dest, hour, minute)):
-        output.append(','.join(map(str, row)))
-    return '<br>'.join(output)
+    cur.execute("""SELECT etd, count(*)
+                FROM etd
+                WHERE dest = ? AND minute_of_day = ? AND station = ?
+                GROUP BY etd""",
+                (dest, minute_of_day, station))
+    header = 'etd,count<br>'
+    str_rows = [','.join(map(str, row)) for row in cur.fetchall()]
+    query_time = time.time() - start_time
+    #print query_time
+    cur.close()
+    return header + '<br>'.join(str_rows)
 
 if __name__ == "__main__":
     app.run(debug=True)

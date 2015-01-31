@@ -1,0 +1,1 @@
+from data-fetch import app as application
