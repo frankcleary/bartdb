@@ -1,12 +1,31 @@
 import sqlite3
+import time
 
-from flask import Flask, request
+from flask import Flask, request, g
+
+DATABASE = 'bart.db'
+
 app = Flask(__name__)
+app.config.from_object(__name__)
+
+def connect_to_database():
+    return sqlite3.connect(app.config['DATABASE'])
+
+def get_db():
+    db = getattr(g, 'db', None)
+    if db is None:
+        db = g.db = connect_to_database()
+    return db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, 'db', None)
+    if db is not None:
+        db.close()
 
 @app.route("/dest/<dest>")
 def print_data(dest):
-    conn = sqlite3.connect('bart.db')
-    c = conn.cursor()
+    c = get_db().cursor()
     hour, minute = request.args.get('time', '8:00').split(':')
     try:
         hour = int(hour)
@@ -16,12 +35,8 @@ def print_data(dest):
     output = []
     for row in c.execute('select etd, count(*) from etd where dest = ? and hour = ? and minute = ? group by etd',
                          (dest, hour, minute)):
-        print row
-        output.append(row)
-    result = ['hour,minute,etd,sta,dest']
-    for row in output:
-        result.append(','.join(map(str, row)))
-    return '<br>'.join(result)
+        output.append(','.join(map(str, row)))
+    return '<br>'.join(output)
 
 if __name__ == "__main__":
     app.run(debug=True)
