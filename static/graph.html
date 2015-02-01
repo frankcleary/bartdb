@@ -27,15 +27,60 @@
 
 </style>
 <body>
+<p>
+  <label for="dest" 
+         style="display: inline-block; width: 240px; text-align: right">
+         dest =
+  </label>
+  <input type="text" id="dest" value="Millbrae">
+  <label for="station" 
+         style="display: inline-block; width: 240px; text-align: right">
+         station =
+  </label>
+  <input type="text" id="station" value="plza">
+</p>
+<p>
+  <label for="hour" 
+         style="display: inline-block; width: 240px; text-align: right">
+         hour =
+  </label>
+  <input type="number" id="hour" value="7">
+  <label for="minute" 
+         style="display: inline-block; width: 240px; text-align: right">
+         minute = 
+  </label>
+  <input type="number" id="minute" value="40">
+
+</p>
+
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
+d3.select("#dest").on("input", function() {
+  update_url();
+});
+
+
+d3.select("#station").on("input", function() {
+  update_url();
+});
+
+d3.select("#minute").on("input", function() {
+  update_url();
+});
+
+d3.select("#hour").on("input", function() {
+  update_url();
+});
+
+
+function make_graph(url) {
 var margin = {top: 20, right: 20, bottom: 30, left: 40},
     width = 500 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+    height = 300 - margin.top - margin.bottom;
 
-var x = d3.scale.ordinal()
-    .rangeRoundBands([0, width], .1);
+var x = d3.scale.linear()
+    .range([0,  width]);
 
 var y = d3.scale.linear()
     .range([height, 0]);
@@ -55,9 +100,8 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-d3.csv("http://localhost:5000/?dest=Millbrae&time=7:55&station=plza", type, function(error, data) {
-  data.map(function(d) { console.log(d); });
-  x.domain(data.map(function(d) { return d.etd; }));
+d3.csv(url, type, function(error, data) {
+  x.domain([0, d3.max(data, function(d) { return d.etd; })]);
   y.domain([0, d3.max(data, function(d) { return d.count; })]);
 
   svg.append("g")
@@ -81,11 +125,28 @@ d3.csv("http://localhost:5000/?dest=Millbrae&time=7:55&station=plza", type, func
     .enter().append("rect")
       .attr("class", "bar")
       .attr("x", function(d) { return x(d.etd); })
-      .attr("width", x.rangeBand())
+      .attr("width", 8)
       .attr("y", function(d) { return y(d.count); })
       .attr("height", function(d) { return height - y(d.count); });
 
 });
+}
+
+function update_url(dest) {
+  d3.selectAll("svg").remove();
+  dest = document.getElementById("dest").value;
+  station =  document.getElementById("station").value;
+  hour = document.getElementById("hour").value;
+  minute =  document.getElementById("minute").value;
+  console.log(dest)
+  console.log(station)
+  url = "http://ec2-54-148-140-220.us-west-2.compute.amazonaws.com/bartdb/?dest=" + dest + "&time=" + hour +":" + minute + "&station=" + station
+  console.log(url)
+  make_graph(url);
+}
+
+ make_graph("http://ec2-54-148-140-220.us-west-2.compute.amazonaws.com/bartdb/?dest=Richmond&time=7:50&station=plza");
+
 
 function type(d) {
   d.etd = +d.etd;
