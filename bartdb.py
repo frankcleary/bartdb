@@ -56,12 +56,12 @@ def print_data():
                 WHERE dest = ? AND minute_of_day = ? AND station = ?
                 GROUP BY etd""",
                 (dest, minute_of_day, station))
-    header = 'etd,count<br>'
+    header = 'etd,count\n'
     str_rows = [','.join(map(str, row)) for row in cur.fetchall()]
     query_time = time.time() - start_time
     #print query_time
     cur.close()
-    return header + '<br>'.join(str_rows)
+    return header + '\n'.join(str_rows)
 
 if __name__ == "__main__":
     app.run(debug=True)
