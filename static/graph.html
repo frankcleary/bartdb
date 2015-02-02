@@ -21,10 +21,6 @@
   shape-rendering: crispEdges;
 }
 
-.x.axis path {
-  display: none;
-}
-
 </style>
 <body>
 <p>
@@ -76,8 +72,10 @@ d3.select("#hour").on("input", function() {
 
 function make_graph(url) {
 var margin = {top: 20, right: 20, bottom: 30, left: 40},
-    width = 500 - margin.left - margin.right,
+    width = 600 - margin.left - margin.right,
     height = 300 - margin.top - margin.bottom;
+// whitespace on either side of the bars in units of minutes
+var binmargin = .1; 
 
 var x = d3.scale.linear()
     .range([0,  width]);
@@ -87,7 +85,8 @@ var y = d3.scale.linear()
 
 var xAxis = d3.svg.axis()
     .scale(x)
-    .orient("bottom");
+    .orient("bottom")
+    .ticks(6);
 
 var yAxis = d3.svg.axis()
     .scale(y)
@@ -101,14 +100,17 @@ var svg = d3.select("body").append("svg")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 d3.csv(url, type, function(error, data) {
-  x.domain([0, d3.max(data, function(d) { return d.etd; })]);
+  x.domain([0, 25]);
   y.domain([0, d3.max(data, function(d) { return d.count; })]);
 
   svg.append("g")
       .attr("class", "x axis")
       .attr("transform", "translate(0," + height + ")")
-      .text("ETD")
-      .call(xAxis);
+      .call(xAxis)
+    .append("text")
+      .text("ETD (minutes)")
+      .attr("dy", "3em")
+      .attr("x", width / 2);
 
   svg.append("g")
       .attr("class", "y axis")
@@ -125,12 +127,15 @@ d3.csv(url, type, function(error, data) {
     .enter().append("rect")
       .attr("class", "bar")
       .attr("x", function(d) { return x(d.etd); })
-      .attr("width", 8)
+      .attr("width", x(1 - 2 * binmargin))
       .attr("y", function(d) { return y(d.count); })
       .attr("height", function(d) { return height - y(d.count); });
 
 });
 }
+
+
+var URL_BASE = "http://aws.dsbytes.com/bartdb/";
 
 function update_url(dest) {
   d3.selectAll("svg").remove();
@@ -140,12 +145,12 @@ function update_url(dest) {
   minute =  document.getElementById("minute").value;
   console.log(dest)
   console.log(station)
-  url = "http://ec2-54-148-140-220.us-west-2.compute.amazonaws.com/bartdb/?dest=" + dest + "&time=" + hour +":" + minute + "&station=" + station
+  url = URL_BASE + "?dest=" + dest + "&time=" + hour +":" + minute + "&station=" + station
   console.log(url)
   make_graph(url);
 }
 
- make_graph("http://ec2-54-148-140-220.us-west-2.compute.amazonaws.com/bartdb/?dest=Richmond&time=7:50&station=plza");
+ make_graph(URL_BASE + "?dest=Richmond&time=7:50&station=plza");
 
 
 function type(d) {
