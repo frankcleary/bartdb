@@ -70,18 +70,20 @@ d3.select("#hour").on("input", function() {
 });
 
 
-function make_graph(url) {
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
-    width = 600 - margin.left - margin.right,
-    height = 300 - margin.top - margin.bottom;
+var margin = {top: 20, right: 20, bottom: 30, left: 40};
+var width = 600 - margin.left - margin.right;
+var height = 300 - margin.top - margin.bottom;
+
+
 // whitespace on either side of the bars in units of minutes
-var binmargin = .1; 
+var binMargin = .1;
 
 var x = d3.scale.linear()
     .range([0,  width]);
 
 var y = d3.scale.linear()
     .range([height, 0]);
+
 
 var xAxis = d3.svg.axis()
     .scale(x)
@@ -93,17 +95,16 @@ var yAxis = d3.svg.axis()
     .orient("left")
     .ticks(10);
 
+  x.domain([0, 25]);
+  y.domain([0, 20]);
+
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-d3.csv(url, type, function(error, data) {
-  x.domain([0, 25]);
-  y.domain([0, d3.max(data, function(d) { return d.count; })]);
-
-  svg.append("g")
+svg.append("g")
       .attr("class", "x axis")
       .attr("transform", "translate(0," + height + ")")
       .call(xAxis)
@@ -112,25 +113,31 @@ d3.csv(url, type, function(error, data) {
       .attr("dy", "3em")
       .attr("x", width / 2);
 
-  svg.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("Count");
 
+
+svg.append("g")
+  .attr("class", "y axis")
+  .call(yAxis)
+.append("text")
+  .attr("transform", "rotate(-90)")
+  .attr("y", 6)
+  .attr("dy", ".71em")
+  .style("text-anchor", "end")
+  .text("Count");
+
+function make_graph(url) {
+
+d3.csv(url, type, function(error, data) {
   svg.selectAll(".bar")
       .data(data)
     .enter().append("rect")
       .attr("class", "bar")
       .attr("x", function(d) { return x(d.etd); })
-      .attr("width", x(1 - 2 * binmargin))
-      .attr("y", function(d) { return y(d.count); })
-      .attr("height", function(d) { return height - y(d.count); });
-
+      .attr("width", x(1 - 2 * binMargin))
+      .attr("y", 0)
+      .attr("height", 0)
+       .transition().attr("y", function(d) { return y(d.count); })
+       .attr("height", function(d) { return height - y(d.count); });
 });
 }
 
@@ -138,7 +145,7 @@ d3.csv(url, type, function(error, data) {
 var URL_BASE = "http://aws.dsbytes.com/bartdb/";
 
 function update_url(dest) {
-  d3.selectAll("svg").remove();
+  svg.selectAll(".bar").remove()
   dest = document.getElementById("dest").value;
   station =  document.getElementById("station").value;
   hour = document.getElementById("hour").value;
