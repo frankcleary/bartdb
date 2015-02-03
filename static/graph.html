@@ -129,6 +129,10 @@ d3.csv(url, type, function(error, data) {
 
   var bars = svg.selectAll(".bar")
       .data(data, function(d) { return d.etd; });
+    bars.transition()
+      .attr("y", function(d) { return  y(d.count); } )
+      .attr("height", function(d) { return height - y(d.count); } );
+
     bars.enter().append("rect")
       .attr("class", "bar")
       .attr("x", function(d) { return x(d.etd); })
