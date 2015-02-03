@@ -96,7 +96,6 @@ var yAxis = d3.svg.axis()
     .ticks(10);
 
   x.domain([0, 25]);
-  y.domain([0, 20]);
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -113,31 +112,37 @@ svg.append("g")
       .attr("dy", "3em")
       .attr("x", width / 2);
 
-
-
-svg.append("g")
-  .attr("class", "y axis")
-  .call(yAxis)
-.append("text")
-  .attr("transform", "rotate(-90)")
-  .attr("y", 6)
-  .attr("dy", ".71em")
-  .style("text-anchor", "end")
-  .text("Count");
-
 function make_graph(url) {
 
 d3.csv(url, type, function(error, data) {
-  svg.selectAll(".bar")
-      .data(data)
-    .enter().append("rect")
+    y.domain([0, d3.max(data, function(d) { return d.count; })]);
+
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Count");
+
+  var bars = svg.selectAll(".bar")
+      .data(data, function(d) { return d.etd; });
+    bars.enter().append("rect")
       .attr("class", "bar")
       .attr("x", function(d) { return x(d.etd); })
       .attr("width", x(1 - 2 * binMargin))
-      .attr("y", 0)
+      .attr("y", height)
       .attr("height", 0)
        .transition().attr("y", function(d) { return y(d.count); })
        .attr("height", function(d) { return height - y(d.count); });
+
+    bars.exit()
+      .transition()
+      .attr("y", height)
+      .attr("height", 0)
+    .remove()
 });
 }
 
@@ -145,7 +150,8 @@ d3.csv(url, type, function(error, data) {
 var URL_BASE = "http://aws.dsbytes.com/bartdb/";
 
 function update_url(dest) {
-  svg.selectAll(".bar").remove()
+  //svg.selectAll(".bar").remove()
+  svg.selectAll("g.y.axis").remove();
   dest = document.getElementById("dest").value;
   station =  document.getElementById("station").value;
   hour = document.getElementById("hour").value;
