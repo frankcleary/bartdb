@@ -10,46 +10,61 @@
   fill: brown;
 }
 
+.tick {
+  width: 2px
+}
+
 .axis {
-  font: 10px sans-serif;
+  font: 20px sans-serif;
+  font-weight: bold;
 }
 
 .axis path,
 .axis line {
   fill: none;
   stroke: #000;
+  stroke-width: 2;
   shape-rendering: crispEdges;
 }
 
 </style>
 <body>
 <p>
-  <label for="dest" 
+  <label for="station_select"
+          style="display: inline-block; width: 240px; text-align: right">
+    Station =
+  </label>
+  <select id='station_select'>
+    <option value="plza">El Cerrito Plaza</option>
+    <option value="mont">Montgomery</option>
+  </select>
+  <label for="dest"
          style="display: inline-block; width: 240px; text-align: right">
          dest =
   </label>
   <input type="text" id="dest" value="Millbrae">
-  <label for="station" 
-         style="display: inline-block; width: 240px; text-align: right">
-         station =
-  </label>
-  <input type="text" id="station" value="plza">
 </p>
 <p>
-  <label for="hour" 
+  <label for="hour"
          style="display: inline-block; width: 240px; text-align: right">
          hour =
   </label>
   <input type="number" id="hour" value="7">
-  <label for="minute" 
+  <label for="minute"
          style="display: inline-block; width: 240px; text-align: right">
-         minute = 
+         minute =
   </label>
   <input type="number" id="minute" value="40">
-
+</p>
+<p>
+  <label for="time"
+         style="display: inline-block; width: 240px; text-align: right">
+         time = <span id="prettyTime">...</span>
+       </label>
+  <input type="range" id="time" min="240" max="1440" style="width:600px">
 </p>
 
-<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://127.0.0.1:8000/d3.js"></script>
 <script>
 
 d3.select("#dest").on("input", function() {
@@ -57,7 +72,7 @@ d3.select("#dest").on("input", function() {
 });
 
 
-d3.select("#station").on("input", function() {
+d3.select("#station_select").on("input", function() {
   update_url();
 });
 
@@ -67,20 +82,30 @@ d3.select("#minute").on("input", function() {
 
 d3.select("#hour").on("input", function() {
   update_url();
+  console.log("X");
 });
 
+d3.select("#time").on("input", function() {
+  update_slider(+this.value);
+  console.log("X");
+  update_url();
+});
 
-var margin = {top: 20, right: 20, bottom: 30, left: 40};
+function update_slider(time) {
+  var timeString = Math.floor(time/60) + ":" + time % 60;
+  console.log(timeString);
+  d3.select("#prettyTime").text(timeString);
+}
+
+var margin = {top: 20, right: 20, bottom: 100, left: 60};
 var width = 600 - margin.left - margin.right;
-var height = 300 - margin.top - margin.bottom;
-
+var height = 400 - margin.top - margin.bottom;
 
 // whitespace on either side of the bars in units of minutes
 var binMargin = .1;
 
 var x = d3.scale.linear()
     .range([0,  width]);
-
 var y = d3.scale.linear()
     .range([height, 0]);
 
@@ -89,18 +114,17 @@ var xAxis = d3.svg.axis()
     .scale(x)
     .orient("bottom")
     .ticks(6);
-
 var yAxis = d3.svg.axis()
     .scale(y)
     .orient("left")
     .ticks(10);
 
-  x.domain([0, 25]);
+x.domain([0, 25]);
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
-  .append("g")
+    .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 svg.append("g")
@@ -110,45 +134,47 @@ svg.append("g")
     .append("text")
       .text("ETD (minutes)")
       .attr("dy", "3em")
-      .attr("x", width / 2);
+      .attr("text-align", "center")
+      .attr("x", width / 2 - margin.right - margin.left);
 
-function make_graph(url) {
+      function make_graph(url) {
 
-d3.csv(url, type, function(error, data) {
-    y.domain([0, d3.max(data, function(d) { return d.count; })]);
+        d3.csv(url, type, function(error, data) {
+          y.domain([0, d3.max(data, function(d) { return d.count; })]);
 
-    svg.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("Count");
+          svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis)
+          .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -height / 2 + margin.top)
+            .attr("dy", "-2em")
+            .text("Count");
 
-  var bars = svg.selectAll(".bar")
-      .data(data, function(d) { return d.etd; });
-    bars.transition()
-      .attr("y", function(d) { return  y(d.count); } )
-      .attr("height", function(d) { return height - y(d.count); } );
+          var bars = svg.selectAll(".bar")
+              .data(data, function(d) { return d.etd; });
 
-    bars.enter().append("rect")
-      .attr("class", "bar")
-      .attr("x", function(d) { return x(d.etd); })
-      .attr("width", x(1 - 2 * binMargin))
-      .attr("y", height)
-      .attr("height", 0)
-       .transition().attr("y", function(d) { return y(d.count); })
-       .attr("height", function(d) { return height - y(d.count); });
+          bars.transition(1000)
+              .attr("y", function(d) { return  y(d.count); } )
+              .attr("height", function(d) { return height - y(d.count); } );
 
-    bars.exit()
-      .transition()
-      .attr("y", height)
-      .attr("height", 0)
-    .remove()
-});
-}
+          bars.enter().append("rect")
+              .attr("class", "bar")
+              .attr("x", function(d) { return x(d.etd); })
+              .attr("width", x(1 - 2 * binMargin))
+              .attr("y", height)
+              .attr("height", 0)
+              .transition(1000)
+              .attr("y", function(d) { return y(d.count); })
+              .attr("height", function(d) { return height - y(d.count); });
+
+          bars.exit()
+              .transition(1000)
+              .attr("y", height)
+              .attr("height", 0)
+              .remove();
+        });
+      }
 
 
 var URL_BASE = "http://aws.dsbytes.com/bartdb/";
@@ -157,12 +183,15 @@ function update_url(dest) {
   //svg.selectAll(".bar").remove()
   svg.selectAll("g.y.axis").remove();
   dest = document.getElementById("dest").value;
-  station =  document.getElementById("station").value;
-  hour = document.getElementById("hour").value;
-  minute =  document.getElementById("minute").value;
+  station =  document.getElementById("station_select").value;
+  hour = Math.floor(document.getElementById("time").value / 60);
+  minute =  document.getElementById("time").value % 60;
   console.log(dest)
   console.log(station)
-  url = URL_BASE + "?dest=" + dest + "&time=" + hour +":" + minute + "&station=" + station
+  url = URL_BASE +
+        "?dest=" + dest +
+        "&time=" + hour + ":" + minute +
+        "&station=" + station
   console.log(url)
   make_graph(url);
 }

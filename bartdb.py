@@ -29,7 +29,6 @@ def execute_query(query, args=()):
     cur.close()
     return rows
 
-
 @app.route("/viewdb")
 def viewdb():
     return '<br>'.join(str(row) for row in execute_query("SELECT count(*) FROM etd"))
