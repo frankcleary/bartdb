@@ -42,6 +42,6 @@ print full_data_df.head()
 full_data_df[['dest', 'dir', 'etd', 'station', 'minute_of_day', 'day_of_week']].to_sql(
     'etd', conn, index=False, if_exists='replace'
 )
-conn.cursor().execute('CREATE INDEX idx1 ON etd(station, dest, minute_of_day)')
+conn.cursor().execute('CREATE INDEX idx1 ON etd(station, dest, minute_of_day, day_of_week)')
 conn.commit()
 conn.close()
