@@ -51,14 +51,22 @@
          style="display: inline-block; width: 140px; text-align: right">
          Destination =
   </label>
-  <input type="text" id="dest" value="Millbrae">
+  <select id="dest" onchange="update_url()">
+    <option value="Fremont">Fremont</option>
+    <option value="Richmond">Richmond</option>
+    <option value="Millbrae">Millbrae</option>
+    <option value="Pittsburg/Bay Point">Pittsburg/Bay Point</option>
+    <option value="Dublin/Pleasanton">Dublin/Pleasanton</option>
+    <option value="SF Airport">SF Airport</option>
+    <option value="SFO/Millbrae">SFO/Millbrae</option>
+  </select>
 </p>
 <p>
   <label for="time"
-         style="display: inline-block; align: left; width: 240px; text-align: right">
+         style="display: inline-block; align: left; width: 140px; text-align: right">
          Time = <span id="prettyTime">...</span>
        </label>
-  <input type="range" id="time" min="240" max="1440" style="width:600px" default="460">
+  <input type="range" id="time" min="240" max="1440" style="width:600px" value="460">
 </p>
 
 <script src="http://127.0.0.1:8000/d3.js"></script>
@@ -193,8 +201,8 @@ function update_url(dest) {
   make_graph(url);
 }
 
- make_graph(URL_BASE + "?dest=Richmond&time=7:50&station=plza");
-
+ update_url();
+ update_slider(document.getElementById("time").value);
 
 function type(d) {
   d.etd = +d.etd;
