@@ -1,7 +1,10 @@
 import sqlite3
 import time
+import logging
 
 from flask import Flask, request, g
+
+logging.basicConfig(filename='bartdb.log',level=logging.INFO)
 
 DATABASE = 'bart.db'
 
@@ -51,15 +54,15 @@ def print_data():
         minute_of_day = int(hour) + 60 * int(minute)
     except ValueError:
         return "Time formatted incorrectly"
-    cur.execute("""SELECT etd, count(*)
+    result = execute_query("""SELECT etd, count(*)
                 FROM etd
                 WHERE dest = ? AND minute_of_day = ? AND station = ? AND day_of_week = ?
                 GROUP BY etd""",
                 (dest, minute_of_day, station, day))
     header = 'etd,count\n'
-    str_rows = [','.join(map(str, row)) for row in cur.fetchall()]
+    str_rows = [','.join(map(str, row)) for row in result]
     query_time = time.time() - start_time
-    #print query_time
+    logging.info("executed query in %s" % query_time)
     cur.close()
     return header + '\n'.join(str_rows)
 
