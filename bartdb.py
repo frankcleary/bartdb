@@ -45,6 +45,7 @@ def print_data():
     cur = get_db().cursor()
     hour, minute = request.args.get('time', '8:00').split(':')
     station = request.args.get('station')
+    day = request.args.get('day')
     dest = request.args.get('dest')
     try:
         minute_of_day = int(hour) + 60 * int(minute)
@@ -52,9 +53,9 @@ def print_data():
         return "Time formatted incorrectly"
     cur.execute("""SELECT etd, count(*)
                 FROM etd
-                WHERE dest = ? AND minute_of_day = ? AND station = ?
+                WHERE dest = ? AND minute_of_day = ? AND station = ? AND day_of_week = ?
                 GROUP BY etd""",
-                (dest, minute_of_day, station))
+                (dest, minute_of_day, station, day))
     header = 'etd,count\n'
     str_rows = [','.join(map(str, row)) for row in cur.fetchall()]
     query_time = time.time() - start_time
