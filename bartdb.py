@@ -34,7 +34,7 @@ def execute_query(query, args=()):
 
 @app.route("/viewdb")
 def viewdb():
-    return '<br>'.join(str(row) for row in execute_query("SELECT count(*) FROM etd"))
+    return '<br>'.join(str(row) for row in execute_query("SELECT * FROM etd ORDER BY minute_of_day LIMIT 1000"))
 
 
 @app.route("/schema")
@@ -54,11 +54,13 @@ def print_data():
         minute_of_day = int(hour) + 60 * int(minute)
     except ValueError:
         return "Time formatted incorrectly"
-    result = execute_query("""SELECT etd, count(*)
-                FROM etd
-                WHERE dest = ? AND minute_of_day = ? AND station = ? AND day_of_week = ?
-                GROUP BY etd""",
-                (dest, minute_of_day, station, day))
+    result = execute_query(
+        """SELECT etd, count(*)
+            FROM etd
+            WHERE dest = ? AND minute_of_day = ?
+                  AND station = ? AND day_of_week = ?
+            GROUP BY etd""",
+            (dest, minute_of_day, station, day))
     header = 'etd,count\n'
     str_rows = [','.join(map(str, row)) for row in result]
     query_time = time.time() - start_time
@@ -67,4 +69,4 @@ def print_data():
     return header + '\n'.join(str_rows)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
