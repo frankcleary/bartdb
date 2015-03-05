@@ -1,14 +1,20 @@
+"""
+Read in BART ETD data from files and write to SQL.
+"""
 import sqlite3
 import pandas as pd
 import numpy as np
 
-conn = sqlite3.connect('bart.db')
-c = conn.cursor()
-c.execute('DROP TABLE IF EXISTS etd')
-c.execute('CREATE TABLE etd (dest text, dir text, station text, etd integer, minute_of_day integer)')
+DATABASE = 'bart.db'
 
 
 def parse_time(timestamp):
+    """Attempt to parse a timestamp (in seconds) into a pandas datetime in
+    Pacific time, return the timestamp is parsing is successful, NaT (not a
+    time) otherwise
+
+    :return: Pandas timestamp in Pacific time, or NaT
+    """
     try:
         dt = pd.to_datetime(float(timestamp), unit='s')
         return dt.tz_localize('UTC').tz_convert('US/Pacific')
@@ -17,31 +23,63 @@ def parse_time(timestamp):
 
 
 def define_weekday(obs_time):
+    """Return 0 if obs_time occurred on a weekday, 1 if a Saturday, 2 if a
+    Sunday.
+
+    :param obs_time: pandas timestamp
+    """
     if obs_time.weekday() < 5:
         return 0
     elif obs_time.weekday() == 5:
         return 1
     elif obs_time.weekday() == 6:
         return 2
-    return -1
 
 
-def parse_data(file_name):
-    return pd.read_csv(file_name, parse_dates=['time'], date_parser=parse_time)
+def parse_data(file_name, date_parser=parse_time, time_col=['time']):
+    """Return a dataframe from csv file, with times parsed.
 
-df_list = []
-for sta_file in ['plza.csv', 'mont.csv']:
-    df = parse_data(sta_file)
-    df['station'] = sta_file.split('.')[0]
-    df_list.append(df)
-full_data_df = pd.concat(df_list).reset_index(drop=True)
-full_data_df['day_of_week'] = full_data_df['time'].apply(lambda x: define_weekday(x))
-full_data_df['etd'] = full_data_df['etd'].replace('Leaving', 0).dropna().astype(np.int)
-full_data_df['minute_of_day'] = full_data_df['time'].apply(lambda x: x.time().hour + 60 * x.time().minute)
-print full_data_df.head()
-full_data_df[['dest', 'dir', 'etd', 'station', 'minute_of_day', 'day_of_week']].to_sql(
-    'etd', conn, index=False, if_exists='replace'
-)
-conn.cursor().execute('CREATE INDEX idx1 ON etd(station, dest, minute_of_day, day_of_week)')
-conn.commit()
-conn.close()
+    :param file_name: csv file
+    :param date_parser: function to convert time_col to datetime (default:
+    parse time)
+    :param time_col: the time of the column to parse as times
+    :return: DataFrame from csv file
+    """
+    return pd.read_csv(file_name, parse_dates=time_col, date_parser=date_parser)
+
+
+def main(conn, files=['plza.csv', 'mont.csv']):
+    """Read in BART ETD data from files and write that data to the SQL database
+    accessed by conn.
+
+    :param conn: SQL database connection
+    :param files: the files to read data from
+    """
+    df_list = []
+    for sta_file in files:
+        df = parse_data(sta_file)
+        df['station'] = sta_file.split('.')[0]
+        df_list.append(df)
+    full_data_df = pd.concat(df_list).reset_index(drop=True)
+
+    full_data_df['day_of_week'] = full_data_df['time'].apply(lambda x: define_weekday(x))
+    full_data_df['etd'] = full_data_df['etd'].replace('Leaving', 0).dropna()\
+        .astype(np.int)
+    full_data_df['minute_of_day'] = full_data_df['time']\
+        .apply(lambda x: x.time().hour + 60 * x.time().minute)
+
+    output_cols = ['dest', 'dir', 'etd', 'station', 'minute_of_day',
+                   'day_of_week']
+    full_data_df[output_cols].to_sql('etd', conn, index=False,
+                                     if_exists='replace')
+    conn.cursor().execute(
+        """CREATE INDEX idx1
+        ON etd(station, dest, minute_of_day, day_of_week)
+        """
+        )
+    conn.commit()
+    conn.close()
+
+if __name__ == '__main__':
+    conn = sqlite3.connect(DATABASE)
+    main(conn)
