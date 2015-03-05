@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 DATABASE = 'bart.db'
-
+FILES = ['plza.csv', 'mont.csv']
 
 def parse_time(timestamp):
     """Attempt to parse a timestamp (in seconds) into a pandas datetime in
@@ -48,30 +48,27 @@ def parse_data(file_name, date_parser=parse_time, time_col=['time']):
     return pd.read_csv(file_name, parse_dates=time_col, date_parser=date_parser)
 
 
-def main(conn, files=['plza.csv', 'mont.csv']):
+def main(conn, files):
     """Read in BART ETD data from files and write that data to the SQL database
     accessed by conn.
 
     :param conn: SQL database connection
     :param files: the files to read data from
     """
-    df_list = []
+    output_cols = ['dest', 'dir', 'etd', 'station', 'minute_of_day',
+                   'day_of_week']
+    conn.execute("DROP TABLE IF EXISTS etd")
     for sta_file in files:
         df = parse_data(sta_file)
         df['station'] = sta_file.split('.')[0]
-        df_list.append(df)
-    full_data_df = pd.concat(df_list).reset_index(drop=True)
 
-    full_data_df['day_of_week'] = full_data_df['time'].apply(lambda x: define_weekday(x))
-    full_data_df['etd'] = full_data_df['etd'].replace('Leaving', 0).dropna()\
-        .astype(np.int)
-    full_data_df['minute_of_day'] = full_data_df['time']\
-        .apply(lambda x: x.time().hour + 60 * x.time().minute)
+        df['day_of_week'] = df['time'].apply(lambda x: define_weekday(x))
+        df['etd'] = df['etd'].replace('Leaving', 0).dropna()\
+            .astype(np.int)
+        df['minute_of_day'] = df['time']\
+            .apply(lambda x: x.time().hour + 60 * x.time().minute)
+        df[output_cols].to_sql('etd', conn, index=False, if_exists='replace')
 
-    output_cols = ['dest', 'dir', 'etd', 'station', 'minute_of_day',
-                   'day_of_week']
-    full_data_df[output_cols].to_sql('etd', conn, index=False,
-                                     if_exists='replace')
     conn.cursor().execute(
         """CREATE INDEX idx1
         ON etd(station, dest, minute_of_day, day_of_week)
@@ -82,4 +79,4 @@ def main(conn, files=['plza.csv', 'mont.csv']):
 
 if __name__ == '__main__':
     conn = sqlite3.connect(DATABASE)
-    main(conn)
+    main(conn, FILES)
