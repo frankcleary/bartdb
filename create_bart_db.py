@@ -67,7 +67,7 @@ def main(conn, files):
             .astype(np.int)
         df['minute_of_day'] = df['time']\
             .apply(lambda x: x.time().hour + 60 * x.time().minute)
-        df[output_cols].to_sql('etd', conn, index=False, if_exists='replace')
+        df[output_cols].to_sql('etd', conn, index=False, if_exists='append')
 
     conn.cursor().execute(
         """CREATE INDEX idx1
