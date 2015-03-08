@@ -48,7 +48,14 @@ def parse_data(file_name, date_parser=parse_time, time_col=['time']):
     return pd.read_csv(file_name, parse_dates=time_col, date_parser=date_parser)
 
 
-def main(conn, files):
+def time2minute_of_day(obs_time):
+    """Return the minute of day (12:00 midnight = 0) of observation time
+
+    :param obs_time: pandas datetime object
+    """
+    return obs_time.time().hour * 60 + obs_time.time().minute
+
+def csv2sql(conn, files):
     """Read in BART ETD data from files and write that data to the SQL database
     accessed by conn.
 
@@ -61,13 +68,10 @@ def main(conn, files):
     for sta_file in files:
         df = parse_data(sta_file)
         df['station'] = sta_file.split('.')[0]
-
         df['day_of_week'] = df['time'].apply(lambda x: define_weekday(x))
-        df['etd'] = df['etd'].replace('Leaving', 0).dropna()\
-            .astype(np.int)
-        df['minute_of_day'] = df['time']\
-            .apply(lambda x: x.time().hour + 60 * x.time().minute)
-        df[output_cols].to_sql('etd', conn, index=False, if_exists='replace')
+        df['etd'] = df['etd'].replace('Leaving', 0).dropna().astype(np.int)
+        df['minute_of_day'] = df['time'].apply(time2minute_of_day)
+        df[output_cols].to_sql('etd', conn, index=False, if_exists='append')
 
     conn.cursor().execute(
         """CREATE INDEX idx1
@@ -79,4 +83,4 @@ def main(conn, files):
 
 if __name__ == '__main__':
     conn = sqlite3.connect(DATABASE)
-    main(conn, FILES)
+    csv2sql(conn, FILES)
