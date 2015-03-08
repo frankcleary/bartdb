@@ -1,5 +1,5 @@
 // The base endpoint to receive data from. See update_url()
-var URL_BASE = "http://aws.datasciencebytes.com/bartdb/";
+var URL_BASE = "http://aws.datasciencebytes.com/bartdb";
 
 // Update graph in response to inputs
 d3.select("#dest").on("input", make_graph);
