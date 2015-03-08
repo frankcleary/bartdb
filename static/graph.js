@@ -70,7 +70,7 @@ svg.append("g")
     .call(yAxis)
   .append("text")
     .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2 + margin.top)
+    .attr("x", -height / 2)
     .attr("dy", "-2em")
     .text("Count");
 
@@ -111,7 +111,6 @@ svg.append("g")
 var URL_BASE = "http://localhost:5000/";
 
 function update_url(dest) {
-  //svg.selectAll("g.y.axis").remove();
   dest = document.getElementById("dest").value;
   station = document.getElementById("station_select").value;
   day = document.getElementById("day_select").value;
@@ -125,8 +124,8 @@ function update_url(dest) {
   make_graph(url);
 }
 
- update_url();
- update_slider(time);
+update_url();
+update_slider(time);
 
 function type(d) {
   d.etd = +d.etd;
