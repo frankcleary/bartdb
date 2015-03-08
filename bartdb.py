@@ -4,7 +4,7 @@ import logging
 
 from flask import Flask, request, g
 
-logging.basicConfig(filename='bartdb.log',level=logging.INFO)
+logging.basicConfig(filename='bartdb.log', level=logging.INFO)
 
 DATABASE = 'bart.db'
 
@@ -34,39 +34,49 @@ def execute_query(query, args=()):
 
 @app.route("/viewdb")
 def viewdb():
-    return '<br>'.join(str(row) for row in execute_query("SELECT * FROM etd ORDER BY minute_of_day LIMIT 1000"))
+    return '<br>'.join(str(row) for row in execute_query(
+        """SELECT *
+           FROM etd
+           LIMIT 1000"""
+    ))
 
 
 @app.route("/schema")
 def view_schema():
-    return '<br>'.join(str(row) for row in execute_query("pragma table_info('etd')"))
+    return '<br>'.join(str(row) for row in execute_query(
+        """pragma table_info('etd')"""
+    ))
 
 
 @app.route("/")
 def print_data():
+    """Respond to a query of the format:
+    myapp/?dest=Fremont&time=600&station=plza&day=0
+    with ETD data for the time and location specified in the query"""
     start_time = time.time()
     cur = get_db().cursor()
-    hour, minute = request.args.get('time', '8:00').split(':')
+    try:
+        minute_of_day = int(request.args.get('time'))
+    except ValueError:
+        return "Time must be an integer"
     station = request.args.get('station')
+    print minute_of_day
     day = request.args.get('day')
     dest = request.args.get('dest')
-    try:
-        minute_of_day = int(hour) + 60 * int(minute)
-    except ValueError:
-        return "Time formatted incorrectly"
     result = execute_query(
         """SELECT etd, count(*)
-            FROM etd
-            WHERE dest = ? AND minute_of_day = ?
-                  AND station = ? AND day_of_week = ?
-            GROUP BY etd""",
-            (dest, minute_of_day, station, day))
-    header = 'etd,count\n'
+           FROM etd
+           WHERE dest = ? AND minute_of_day = ?
+                 AND station = ? AND day_of_week = ?
+           GROUP BY etd""",
+        (dest, minute_of_day, station, day)
+    )
     str_rows = [','.join(map(str, row)) for row in result]
     query_time = time.time() - start_time
-    logging.info("executed query in %s" % query_time)
+    print("executed query in %s" % query_time)
     cur.close()
+    header = 'etd,count\n'
     return header + '\n'.join(str_rows)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
