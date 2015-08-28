@@ -36,7 +36,8 @@ def define_weekday(obs_time):
         return 2
 
 
-def parse_data(file_name, date_parser=parse_time, time_col=['time']):
+def parse_data(file_name, date_parser=parse_time, time_col=['time'],
+               chunksize=1E5):
     """Return a dataframe from csv file, with times parsed.
 
     :param file_name: csv file
@@ -45,7 +46,9 @@ def parse_data(file_name, date_parser=parse_time, time_col=['time']):
     :param time_col: the time of the column to parse as times
     :return: DataFrame from csv file
     """
-    return pd.read_csv(file_name,names=['time','dest','dir','len','etd'],header=None, parse_dates=time_col, date_parser=date_parser)
+    return pd.read_csv(file_name,names=['time','dest','dir','len','etd'],
+                       header=None, parse_dates=time_col,
+                       date_parser=date_parser, chunksize=chunksize)
 
 
 def time2minute_of_day(obs_time):
@@ -66,13 +69,13 @@ def csv2sql(conn, files):
                    'day_of_week']
     conn.execute("DROP TABLE IF EXISTS etd")
     for sta_file in files:
-        print sta_file
-        df = parse_data(sta_file)
-        df['station'] = sta_file.split('.')[0]
-        df['day_of_week'] = df['time'].apply(lambda x: define_weekday(x))
-        df['etd'] = df['etd'].replace('Leaving', 0).dropna().astype(np.int)
-        df['minute_of_day'] = df['time'].apply(time2minute_of_day)
-        df[output_cols].to_sql('etd', conn, index=False, if_exists='append')
+        for i, df in enumerate(parse_data(sta_file)):
+            print 'Working on chunk {} of {}'.format(i, sta_file)
+            df['station'] = sta_file.split('.')[0]
+            df['day_of_week'] = df['time'].apply(lambda x: define_weekday(x))
+            df['etd'] = df['etd'].replace('Leaving', 0).dropna().astype(np.int)
+            df['minute_of_day'] = df['time'].apply(time2minute_of_day)
+            df[output_cols].to_sql('etd', conn, index=False, if_exists='append')
 
     conn.cursor().execute(
         """CREATE INDEX idx1
