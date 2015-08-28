@@ -45,7 +45,8 @@ def parse_data(file_name, date_parser=parse_time, time_col=['time']):
     :param time_col: the time of the column to parse as times
     :return: DataFrame from csv file
     """
-    return pd.read_csv(file_name, parse_dates=time_col, date_parser=date_parser)
+    return pd.read_csv(file_name, names=['time','dest','dir','len','etd'],
+                       parse_dates=time_col, date_parser=date_parser)
 
 
 def time2minute_of_day(obs_time):
