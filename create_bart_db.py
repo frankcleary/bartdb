@@ -45,7 +45,7 @@ def parse_data(file_name, date_parser=parse_time, time_col=['time']):
     :param time_col: the time of the column to parse as times
     :return: DataFrame from csv file
     """
-    return pd.read_csv(file_name, parse_dates=time_col, date_parser=date_parser)
+    return pd.read_csv(file_name,names=['time','dest','dir','len','etd'],header=None, parse_dates=time_col, date_parser=date_parser)
 
 
 def time2minute_of_day(obs_time):
@@ -66,6 +66,7 @@ def csv2sql(conn, files):
                    'day_of_week']
     conn.execute("DROP TABLE IF EXISTS etd")
     for sta_file in files:
+        print sta_file
         df = parse_data(sta_file)
         df['station'] = sta_file.split('.')[0]
         df['day_of_week'] = df['time'].apply(lambda x: define_weekday(x))
