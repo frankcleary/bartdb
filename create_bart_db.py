@@ -2,61 +2,45 @@
 Read in BART ETD data from files and write to SQL.
 """
 import sqlite3
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
 DATABASE = 'bart.db'
 FILES = ['plza.csv', 'mont.csv']
 
-def parse_time(timestamp):
-    """Attempt to parse a timestamp (in seconds) into a pandas datetime in
-    Pacific time, return the timestamp is parsing is successful, NaT (not a
-    time) otherwise
 
-    :return: Pandas timestamp in Pacific time, or NaT
+def define_weekday(dt_index):
+    """Return an array with 0's for elements of dt_series that are on a
+    weekday, 1 if a Saturday, 2 if a Sunday.
+
+    :param obs_time: DatetimeIndex
     """
-    try:
-        dt = pd.to_datetime(float(timestamp), unit='s')
-        return dt.tz_localize('UTC').tz_convert('US/Pacific')
-    except (AttributeError, ValueError):
-        return pd.NaT
+    result = np.zeros(len(dt_index))
+    weekdays = dt_index.weekday
+    result[weekdays == 5] = 1
+    result[weekdays == 6] = 2
+    return result
 
 
-def define_weekday(obs_time):
-    """Return 0 if obs_time occurred on a weekday, 1 if a Saturday, 2 if a
-    Sunday.
-
-    :param obs_time: pandas timestamp
-    """
-    if obs_time.weekday() < 5:
-        return 0
-    elif obs_time.weekday() == 5:
-        return 1
-    elif obs_time.weekday() == 6:
-        return 2
-
-
-def parse_data(file_name, date_parser=parse_time, time_col=['time'],
-               chunksize=1E5):
+def parse_data(file_name, chunksize=1E5):
     """Return a dataframe from csv file, with times parsed.
 
     :param file_name: csv file
-    :param date_parser: function to convert time_col to datetime (default:
-    parse time)
-    :param time_col: the time of the column to parse as times
     :return: DataFrame from csv file
     """
-    return pd.read_csv(file_name,names=['time','dest','dir','len','etd'],
-                       header=None, parse_dates=time_col,
-                       date_parser=date_parser, chunksize=chunksize)
+    return pd.read_csv(file_name, names=['time','dest','dir','len','etd'],
+                       header=None, chunksize=chunksize)
 
 
-def time2minute_of_day(obs_time):
-    """Return the minute of day (12:00 midnight = 0) of observation time
+def time2minute_of_day(dt_index):
+    """Return the minute of day (12:00 midnight = 0) for each time in
+    dt_series.
 
-    :param obs_time: pandas datetime object
+    :param obs_time: DatetimeIndex
     """
-    return obs_time.time().hour * 60 + obs_time.time().minute
+    return dt_index.hour * 60 + dt_index.minute
+
 
 def csv2sql(conn, files):
     """Read in BART ETD data from files and write that data to the SQL database
@@ -71,10 +55,13 @@ def csv2sql(conn, files):
     for sta_file in files:
         for i, df in enumerate(parse_data(sta_file)):
             print 'Working on chunk {} of {}'.format(i, sta_file)
+            dt_index = (pd.DatetimeIndex(pd.to_datetime(df['time'], unit='s'))
+                        .tz_localize('UTC')
+                        .tz_convert('US/Pacific'))
             df['station'] = sta_file.split('.')[0]
-            df['day_of_week'] = df['time'].apply(lambda x: define_weekday(x))
+            df['day_of_week'] = define_weekday(dt_index)
             df['etd'] = df['etd'].replace('Leaving', 0).dropna().astype(np.int)
-            df['minute_of_day'] = df['time'].apply(time2minute_of_day)
+            df['minute_of_day'] = time2minute_of_day(dt_index)
             df[output_cols].to_sql('etd', conn, index=False, if_exists='append')
 
     conn.cursor().execute(

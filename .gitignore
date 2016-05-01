@@ -1,0 +1,10 @@
+*idea
+*.csv
+*.ipynb_checkpoints
+bartdb.log
+bartcsv*
+*~
+static/*
+vector test.ipynb
+*.pyc
+bart.db*

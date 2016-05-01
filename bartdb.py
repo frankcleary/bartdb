@@ -1,6 +1,6 @@
+import logging
 import sqlite3
 import time
-import logging
 
 from flask import Flask, request, g
 
@@ -60,7 +60,6 @@ def print_data():
     except ValueError:
         return "Time must be an integer"
     station = request.args.get('station')
-    print minute_of_day
     day = request.args.get('day')
     dest = request.args.get('dest')
     result = execute_query(
